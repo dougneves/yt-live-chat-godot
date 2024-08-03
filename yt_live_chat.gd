@@ -9,12 +9,15 @@ var _live_chat_id = ""
 var _next_page_token = null
 var _is_stopped = true
 
-signal yt_live_message_read(text: String, authorId: String, timestamp: String)
+var _user_names = {}
+
+signal yt_live_message_read(text: String, authorId: String, authorTitle: String, timestamp: String)
 
 func _ready():
 	$Timer.timeout.connect(get_next_chat_messages)
 	$HTTPRequestGetLiveChatId.request_completed.connect(on_get_live_chat_id)
 	$HTTPRequestGetLiveChatMessages.request_completed.connect(on_get_next_chat_messages)
+	$HTTPRequestGetChannelInfo.request_completed.connect(on_get_channel_info)
 
 func start_get_message_loop(apiKey: String, liveId: String):
 	_api_key = apiKey
@@ -59,6 +62,20 @@ func get_next_chat_messages():
 		$HTTPRequestGetLiveChatMessages.request("https://www.googleapis.com/youtube/v3/liveChat/messages?part=id%2C%20snippet&key="+_api_key+"&liveChatId="+_live_chat_id+"&pageToken="+_next_page_token)
 	else:
 		$HTTPRequestGetLiveChatMessages.request("https://www.googleapis.com/youtube/v3/liveChat/messages?part=id%2C%20snippet&key="+_api_key+"&liveChatId="+_live_chat_id)
+		
+func get_channel_name(channel_id):
+	$HTTPRequestGetChannelInfo.request("https://www.googleapis.com/youtube/v3/channels?part=snippet&id="+channel_id+"&key="+_api_key)
+
+func get_user_name_by_id(user_id):
+	if _user_names.get(user_id) == null:
+		get_channel_name(user_id)
+		return user_id
+	else:
+		return _user_names.get(user_id)
+
+func on_get_channel_info(_result, _response_code, _header, body):
+	var json = JSON.parse_string(body.get_string_from_utf8())
+	_user_names[json.get("items")[0].get("id")] = json.get("items")[0].get("snippet").get("title")
 
 func on_get_next_chat_messages(_result, _response_code, _header, body):
 	$Timer.stop()
@@ -90,6 +107,7 @@ func on_get_next_chat_messages(_result, _response_code, _header, body):
 									"yt_live_message_read",
 									text,
 									authorId,
+									get_user_name_by_id(authorId),
 									timestamp)
 							else:
 								_log("(ignoring) " + text)

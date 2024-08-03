@@ -9,4 +9,6 @@ script = ExtResource("1_shm0r")
 
 [node name="HTTPRequestGetLiveChatMessages" type="HTTPRequest" parent="."]
 
+[node name="HTTPRequestGetChannelInfo" type="HTTPRequest" parent="."]
+
 [node name="Timer" type="Timer" parent="."]
